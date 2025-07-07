@@ -71,5 +71,3 @@ Thanks to the Gnu/Linux community for inspiration.
 # Screenshots
 
 ![Charlex OS Screenshot](screenshots/charlex2.png)
-
-![Charlex WebOS Screenshot](screenshots/charlex2.png)
