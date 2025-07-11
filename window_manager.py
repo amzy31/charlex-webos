@@ -1,4 +1,6 @@
-from flask import Blueprint, Response, request, render_template_string
+from flask import Blueprint, Response, request, render_template_string, jsonify, send_from_directory
+import os
+import uuid
 
 window_manager_bp = Blueprint('window_manager', __name__)
 
@@ -75,6 +77,48 @@ function openWindow(id) {
     win.style.display = 'flex';
     win.style.zIndex = 1000;
 }
+
+// Save & Download button functionality
+document.addEventListener('DOMContentLoaded', () => {
+    const saveDownloadBtn = document.getElementById('saveDownloadBtn');
+    if (saveDownloadBtn) {
+        // Remove any existing click listeners to prevent multiple triggers
+        saveDownloadBtn.replaceWith(saveDownloadBtn.cloneNode(true));
+        const newSaveDownloadBtn = document.getElementById('saveDownloadBtn');
+        newSaveDownloadBtn.addEventListener('click', async () => {
+            const contentElem = document.getElementById('noteContent');
+            if (!contentElem) {
+                alert('Note content element not found');
+                return;
+            }
+            const content = contentElem.value;
+            try {
+                const response = await fetch('/note/save', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ noteContent: content }),
+                });
+                if (!response.ok) {
+                    throw new Error('Failed to save note');
+                }
+                const data = await response.json();
+                const noteId = data.note_id;
+                const downloadUrl = `/note/download/${noteId}`;
+                // Trigger download
+                const a = document.createElement('a');
+                a.href = downloadUrl;
+                a.download = `${noteId}.txt`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+            } catch (error) {
+                alert('Error saving and downloading note: ' + error.message);
+            }
+        });
+    }
+});
 """
 
 @window_manager_bp.route('/window_manager.js')
@@ -90,3 +134,25 @@ def note():
     else:
         # Stream the note content as plain text
         return Response(note_content, mimetype='text/plain')
+
+# Directory to save notes
+SAVE_DIR = 'saved_notes'
+
+if not os.path.exists(SAVE_DIR):
+    os.makedirs(SAVE_DIR)
+
+@window_manager_bp.route('/note/save', methods=['POST'])
+def save_note():
+    data = request.get_json()
+    content = data.get('noteContent', '')
+    note_id = str(uuid.uuid4())
+    filename = f"{note_id}.txt"
+    filepath = os.path.join(SAVE_DIR, filename)
+    with open(filepath, 'w', encoding='utf-8') as f:
+        f.write(content)
+    return jsonify({'note_id': note_id})
+
+@window_manager_bp.route('/note/download/<note_id>', methods=['GET'])
+def download_note(note_id):
+    filename = f"{note_id}.txt"
+    return send_from_directory(SAVE_DIR, filename, as_attachment=True)

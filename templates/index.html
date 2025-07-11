@@ -160,14 +160,14 @@
                 <div style="width: 48px;"></div> <!-- spacer for controls alignment -->
             </div>
             <form method="POST" action="/note" style="flex: 1; margin: 10px; display: flex; flex-direction: column;">
-                <textarea name="noteContent" style="flex: 1; resize: none; background: rgba(255,255,255,0.2); color: white; border: none; border-radius: 8px; padding: 8px; font-size: 14px;" placeholder="Type your note here...">{{ note_content }}</textarea>
-                <button type="submit" style="margin-top: 8px; padding: 6px 12px; border: none; border-radius: 8px; background-color: #28c840; color: white; font-weight: bold; cursor: pointer;">Save</button>
+                <textarea id="noteContent" name="noteContent" style="flex: 1; resize: none; background: rgba(255,255,255,0.2); color: white; border: none; border-radius: 8px; padding: 8px; font-size: 14px;" placeholder="Type your note here...">{{ note_content }}</textarea>
+                <button type="button" id="saveDownloadBtn" style="margin-top: 8px; padding: 6px 12px; border: none; border-radius: 8px; background-color: #1e90ff; color: white; font-weight: bold; cursor: pointer;">Save</button>
             </form>
         </div>
     </div>
     <div id="dock">
         <div class="dock-icon" title="Welcome Window" onclick="openWindow('window1')">
-            <img src="/static/images/LOGO.svg" alt="LOGO" />
+            <img src="/static/images/logo.jpg" alt="LOGO" />
         </div>
         <div class="dock-icon" title="Note Window" onclick="openWindow('noteWindow')">
             <img src="/static/images/" alt="Note" />
@@ -175,5 +175,34 @@
         <!-- Add more dock icons here -->
     </div>
     <script src="/window_manager.js"></script>
+    <script>
+        document.getElementById('saveDownloadBtn').addEventListener('click', async () => {
+            const content = document.getElementById('noteContent').value;
+            try {
+                const response = await fetch('/note/save', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ noteContent: content }),
+                });
+                if (!response.ok) {
+                    throw new Error('Failed to save note');
+                }
+                const data = await response.json();
+                const noteId = data.note_id;
+                const downloadUrl = `/note/download/${noteId}`;
+                // Trigger download
+                const a = document.createElement('a');
+                a.href = downloadUrl;
+                a.download = `${noteId}.txt`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+            } catch (error) {
+                alert('Error saving and downloading note: ' + error.message);
+            }
+        });
+    </script>
 </body>
 </html>
